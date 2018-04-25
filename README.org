@@ -1,0 +1,50 @@
+*** Secrets setup for Org Linbsd
+
+**** Welcome to Linbsd.
+- We make use of this repository to store team gpgkeys and shared secrets.
+
+*** Generate a GPG key for me to store in repo.
+- Generate an ssh key specific for our organization
+
+#+BEGIN_SRC sh
+./bin/make-my-key
+#+END_SRC
+
+- Output from key generation
+
+#+BEGIN_SRC sh
+Generating a new Gnu PGP key for your userid
+If you make any mistakes, just Control-c and rerun
+What is your email address? <ex: ober@linbsd.org>: ober2@linbsd.org
+What is your full name? <ex: Ober Heim>: ober heim
+What is your password? <ex: AbraCadabra1234>: Please reenter your password for verification: Thanks
+gpg: Generating a basic OpenPGP key
+.+++++
+...........................+++++
+gpg: WARNING: nothing exported
+./ober2@linbsd.org.sec
+----------------------
+sec   4096R/CB42578D 2018-04-25
+uid                  ober heim (GnuPG for LinBSD) <ober2@linbsd.org>
+
+gpg: key CB42578D: secret key imported
+gpg: key CB42578D: public key "ober heim (GnuPG for LinBSD) <ober2@linbsd.org>" imported
+gpg: key CB42578D: "ober heim (GnuPG for LinBSD) <ober2@linbsd.org>" not changed
+gpg: Total number processed: 2
+gpg:               imported: 1  (RSA: 1)
+gpg:              unchanged: 1
+gpg:       secret keys read: 1
+gpg:   secret keys imported: 1
+Key has been generated
+On branch master
+
+nothing added to commit but untracked files present (use "git add" to track)
+Please add your key to git and commit, cut and paste the following:
+git add gpgkeys/* && git commit -a -m "Add gpg key for ober2@linbsd.org" && git push
+#+END_SRC
+
+- Run the last command given to push key to remote origin
+
+#+BEGIN_SRC sh
+git add gpgkeys/* && git commit -a -m "Add gpg key for ober2@linbsd.org" && git push
+#+END_SRC

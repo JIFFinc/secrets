@@ -1,0 +1,119 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'json'
+require 'yaml'
+require 'tempfile'
+require 'optparse'
+
+def verify_args
+  unless File.exists?("./bundles/#{@bundle}.gpg")
+    puts "Cound not find the bundle named #{@bundle}.gpg in ./bundles!"
+    exit(2)
+  end
+end
+
+def ensure_args(args)
+  out = ""
+  args.uniq.map { |a| out << "\n\t #{a}=<#{a}> #{@args_def[a].to_s}" unless ENV[a.to_s]  }
+  perror "\nArguments required: #{out}" unless out.empty?
+end
+
+def yesno prompt
+  print prompt
+  case STDIN.gets.downcase.chomp!
+  when "y", "yes"
+    return true
+  when "n", "no"
+    return false
+  else
+    return false
+  end
+end
+
+def get_recipients
+  unless File.exists?("./config/users.yml")
+    puts "Could not find a YAML config for #{@bundle} in config/"
+    puts "Can't encode without a list of receipients"
+    exit(2)
+  end
+  YAML.load_file("./config/users.yml")
+end
+
+def decode_bundle
+  puts %x{gpg --decrypt bundles/#{@bundle}.gpg > #{@decoded.path}}
+  unless $?.exitstatus == 0
+    puts "Decryption failed."
+    exit(2)
+  end
+end
+
+def encrypt_bundle
+  keyring = Tempfile.new(@bundle)
+  users = get_recipients
+
+  unless users
+    puts "No users found for bundle #{bundle}"
+    exit(2)
+  end
+
+  #Build gpg encrypt command
+  gpg_cmd = "gpg  --trust-model always --no-default-keyring --keyring #{keyring.path}"
+  gpg_cmd << users[@bundle]["keys"].map {|x| " --recipient #{x} " }.join
+
+  FileUtils.ln_sf(@decoded.path, "bundles/#{@bundle}")
+  gpg_cmd << " --encrypt-files bundles/#{@bundle}"
+
+  if yesno("Please verify you want the following users to access this bundle:#{users[@bundle]["keys"].join(', ')}? <y/n>")
+    # Import all keys.
+    puts %x{gpg --trust-model always --batch --no-default-keyring --keyring #{keyring.path} --import ./gpgkeys/*}
+    puts %x{#{gpg_cmd}}
+    puts "Completed encryption"
+  else
+    puts "Cleaning up without encoding changes!"
+  end
+  cleanup_link
+end
+
+def cleanup_link
+  puts "#{__method__} called with #{@bundle}"
+  File.unlink("bundle/#{@bundle}") if File.exists?("bundle/#{@bundle}")
+end
+
+def edit_bundle
+  ENV['EDITOR'] = "vi" unless ENV['EDITOR']
+  puts "decoded: #{@decoded.path}"
+  system("$EDITOR #{@decoded.path}")
+end
+
+def main
+  options = {}
+  OptionParser.new do |opts|
+    opts.banner = "Usage: edit [options] [bundle]"
+    opts.on("-u", "--update", "Update the bundle without editing it.") do |u|
+      options[:update] = u
+    end
+  end.parse!
+
+  @bundle=ARGV[0]
+  @decoded = Tempfile.new(@bundle)
+  begin
+    puts verify_args
+    puts decode_bundle
+    if options[:update]
+      puts "Updating credentials on bundle #{@bundle}"
+    else
+      puts edit_bundle
+    end
+    puts encrypt_bundle
+    puts "Please run the following command:"
+    puts "git commit -a -m \"update #{@bundle} bundle\" && git push"
+    cleanup_link
+  ensure
+    @decoded.close
+    @decoded.unlink
+  end
+end
+
+
+main

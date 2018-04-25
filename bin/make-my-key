@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+#
+# Script to generate an initial gpg key and commit it to the secrets repo.
+#
+
+export PATH=/bin:/usr/bin:/usr/local/bin
+
+gpg="$(which gpg)"
+
+if [[ X"$gpg"X == XX ]]; then
+    echo "Could not locate GNU Privacy Guard (gpg)"
+    echo "Please install GPG"
+    echo "If you have HomeBrew installed, then 'brew install gpg' will suffice"
+    echo "If you prefer a graphical interface and email integration then go to"
+    echo "http://gpgtools.org and download their MacGPG"
+    exit 2
+fi
+
+
+tf="$(mktemp)"
+
+echo "Generating a new Gnu PGP key for your userid"
+echo "If you make any mistakes, just Control-c and rerun"
+echo -n "What is your email address? <ex: ober@linbsd.org>: "
+read email
+echo -n "What is your full name? <ex: Ober Heim>: "
+read fullname
+echo -n "What is your password? <ex: AbraCadabra1234>: "
+stty -echo
+read password
+echo -n "Please reenter your password for verification: "
+read password2
+stty echo
+echo "Thanks"
+
+if [[ X"$password"X != X"$password2"X ]]; then
+    echo "Passwords did not match... Exiting"
+    exit 2
+fi
+
+cat > "$tf"  <<EOF
+          %echo Generating a basic OpenPGP key
+          Key-Type: RSA
+          Key-Length: 4096
+          Name-Real: $fullname
+          Name-Comment: GnuPG for LinBSD
+          Name-Email: $email
+          Expire-Date: 0
+          Passphrase: $password
+          %pubring ${email}.pub
+          %secring ${email}.sec
+EOF
+
+${gpg} --batch --gen-key "$tf"
+${gpg} --output ./gpgkeys/"${email}".asc --armor --export "${email}"
+${gpg} --no-default-keyring --secret-keyring ./"${email}".sec --keyring ./"${email}".pub --list-secret-keys
+${gpg} --import ./"${email}".sec ./"${email}".pub || echo "failure to import?"
+${gpg} --output ./gpgkeys/"${email}".asc --armor --export "${email}"
+
+echo "Key has been generated"
+
+rm -f "${tf}"
+rm ./"${email}".sec ./"${email}".pub
+
+
+git status
+echo "Please add your key to git and commit, cut and paste the following:"
+echo "git add gpgkeys/* && git commit -a -m \"Add gpg key for ${email}\" && git push"

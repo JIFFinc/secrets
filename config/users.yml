@@ -1,0 +1,12 @@
+---
+admin: &admin
+  keys:
+    - ober@linbsd.org
+    - jaimef@linbsd.org
+
+users: &users
+  keys:
+    - user1@linbsd.org
+    - user2@linbsd.org
+
+passwords1: *admin
