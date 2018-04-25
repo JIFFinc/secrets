@@ -9,4 +9,4 @@ users: &users
     - user1@linbsd.org
     - user2@linbsd.org
 
-passwords1: *admin
+passwords1.yaml: *admin
